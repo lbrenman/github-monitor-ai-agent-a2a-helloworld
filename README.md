@@ -2,7 +2,7 @@
 
 > Autonomous GitHub activity agent (A2A Client). Polls your GitHub account for new events, uses Claude to summarize them, and delegates Slack notifications to `slack-notifier-agent` via the A2A protocol.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/lbrenman/github-monitor)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/lbrenman/github-monitor-ai-agent-a2a-helloworld)
 
 ## How It Works
 
