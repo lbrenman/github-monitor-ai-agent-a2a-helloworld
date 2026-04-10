@@ -20,11 +20,11 @@ github-monitor  ──── A2A ────▶  slack-notifier-agent  ──�
 ## Quick Start
 
 ### Step 1 — Start slack-notifier-agent first
-Open the [slack-notifier-agent](https://github.com/lbrenman/slack-notifier-agent) repo in a separate Codespace and start it running. Then copy its public port 3100 URL from the Ports tab.
+Open the [slack-notifier-agent](https://github.com/lbrenman/slack-notifier-agent-ai-agent-a2a-helloworld) repo in a separate Codespace and start it running. Then copy its public port 3100 URL from the Ports tab.
 
 ### Step 2 — Start this agent
 ```bash
-git clone https://github.com/lbrenman/github-monitor
+git clone https://github.com/lbrenman/github-monitor-ai-agent-a2a-helloworld
 cd github-monitor
 npm install
 cp .env.example .env
@@ -45,7 +45,7 @@ npm start
 
 ## Getting the NOTIFIER_URL
 
-1. Open the `slack-notifier-agent` Codespace
+1. Open the `slack-notifier-agent-ai-agent-a2a-helloworld` Codespace
 2. Click the **Ports** tab in VS Code
 3. Find port `3100`
 4. Set visibility to **Public**
