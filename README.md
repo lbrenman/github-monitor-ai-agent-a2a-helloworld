@@ -45,7 +45,7 @@ npm start
 
 ## Getting the NOTIFIER_URL
 
-1. Open the `slack-notifier-agent-ai-agent-a2a-helloworld` Codespace
+1. Open the `slack-notifier-agent-ai-agent-a2a-helloworld` Codespace 
 2. Click the **Ports** tab in VS Code
 3. Find port `3100`
 4. Set visibility to **Public**
