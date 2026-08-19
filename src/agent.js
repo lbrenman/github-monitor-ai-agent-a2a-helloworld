@@ -21,6 +21,7 @@ const http = require('http');
 const GITHUB_TOKEN  = process.env.GITHUB_TOKEN;
 const GITHUB_USER   = process.env.GITHUB_USER || 'lbrenman';
 const NOTIFIER_URL  = process.env.NOTIFIER_URL;
+const NOTIFIER_API_KEY = process.env.NOTIFIER_API_KEY || null; // only needed if notifier has API_KEY set
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '60000', 10);
 const MODEL         = process.env.MODEL || 'claude-opus-4-5-20251101';
 const CONTROL_PORT  = parseInt(process.env.CONTROL_PORT || '3000', 10);
@@ -50,29 +51,63 @@ function addLog(msg) {
 // ─── A2A ──────────────────────────────────────────────────────────────────────
 
 async function discoverNotifier() {
-  const url = `${NOTIFIER_URL}/.well-known/agent.json`;
-  addLog(`Discovering agent at ${url}...`);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Agent discovery failed: ${res.status} ${res.statusText}`);
-  notifierAgentCard = await res.json();
-  addLog(`Discovered: "${notifierAgentCard.name}" — ${notifierAgentCard.description}`);
+  // Try the A2A v0.3.0 primary path first, fall back to the legacy alias.
+  for (const path of ['/.well-known/agent-card.json', '/.well-known/agent.json']) {
+    const url = `${NOTIFIER_URL}${path}`;
+    addLog(`Discovering agent at ${url}...`);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      notifierAgentCard = await res.json();
+      addLog(`Discovered: "${notifierAgentCard.name}" — ${notifierAgentCard.description}`);
+      if (notifierAgentCard.security?.length && !NOTIFIER_API_KEY) {
+        addLog('WARNING: notifier requires auth (security scheme present) but NOTIFIER_API_KEY is not set.');
+      }
+      return;
+    } catch (err) {
+      addLog(`Discovery attempt at ${path} failed: ${err.message}`);
+    }
+  }
+  throw new Error('Agent discovery failed at both agent-card.json and agent.json');
 }
 
 async function sendTask(summary) {
-  const task = {
-    id: randomUUID(),
-    message: { parts: [{ type: 'text', text: summary }] },
+  const requestId = randomUUID();
+  const body = {
+    jsonrpc: '2.0',
+    id: requestId,
+    method: 'message/send',
+    params: {
+      message: {
+        role: 'user',
+        messageId: randomUUID(),
+        kind: 'message',
+        parts: [{ kind: 'text', text: summary }],
+      },
+    },
   };
-  addLog(`Sending A2A task ${task.id} to ${notifierAgentCard?.name}...`);
-  const res = await fetch(`${NOTIFIER_URL}/tasks`, {
+
+  addLog(`Sending A2A message/send ${requestId} to ${notifierAgentCard?.name}...`);
+  const res = await fetch(`${NOTIFIER_URL}/a2a`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(task),
+    headers: {
+      'Content-Type': 'application/json',
+      ...(NOTIFIER_API_KEY ? { 'x-api-key': NOTIFIER_API_KEY } : {}),
+    },
+    body: JSON.stringify(body),
   });
+
+  if (res.status === 401) {
+    throw new Error('A2A task rejected: 401 Unauthorized — set NOTIFIER_API_KEY to match the notifier\'s API_KEY');
+  }
   if (!res.ok) throw new Error(`A2A task failed: ${res.status} ${res.statusText}`);
-  const result = await res.json();
-  const reply = result.artifacts?.[0]?.parts?.find(p => p.type === 'text')?.text;
-  addLog(`Task complete. Notifier replied: "${reply?.slice(0, 80)}"`);
+
+  const rpcResponse = await res.json();
+  if (rpcResponse.error) throw new Error(`A2A task failed: [${rpcResponse.error.code}] ${rpcResponse.error.message}`);
+
+  const task = rpcResponse.result;
+  const reply = task?.artifacts?.[0]?.parts?.find(p => (p.kind || p.type) === 'text')?.text;
+  addLog(`Task ${task?.status?.state}. Notifier replied: "${reply?.slice(0, 80)}"`);
 }
 
 // ─── GitHub ───────────────────────────────────────────────────────────────────
@@ -318,6 +353,7 @@ async function main() {
   console.log(`GitHub user   : ${GITHUB_USER}`);
   console.log(`Poll interval : ${POLL_INTERVAL / 1000}s`);
   console.log(`Notifier URL  : ${NOTIFIER_URL}`);
+  console.log(`Notifier auth : ${NOTIFIER_API_KEY ? 'x-api-key configured' : 'none'}`);
   console.log(`Web UI        : http://localhost:${CONTROL_PORT}`);
   console.log(`Model         : ${MODEL}`);
   console.log('\nFirst poll sets baseline — notifications start on second poll.\n');

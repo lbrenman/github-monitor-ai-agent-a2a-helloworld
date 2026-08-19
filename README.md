@@ -11,10 +11,10 @@ github-monitor  ──── A2A ────▶  slack-notifier-agent  ──�
   (this repo)                      (separate repo)
 ```
 
-1. On startup, discovers `slack-notifier-agent` by fetching its Agent Card at `/.well-known/agent.json`
+1. On startup, discovers `slack-notifier-agent` by fetching its Agent Card at `/.well-known/agent-card.json` (falls back to the legacy `/.well-known/agent.json` alias)
 2. Every 60 seconds, polls the GitHub Events API for your account
 3. New events are summarized by Claude
-4. The summary is sent to `slack-notifier-agent` as an A2A task via `POST /tasks`
+4. The summary is sent to `slack-notifier-agent` as an A2A `message/send` JSON-RPC 2.0 call via `POST /a2a`, with an `x-api-key` header if `NOTIFIER_API_KEY` is set
 5. The notifier agent handles crafting and posting the Slack message
 
 ## Quick Start
@@ -39,6 +39,7 @@ npm start
 | `ANTHROPIC_API_KEY` | ✅ | Your Anthropic API key |
 | `GITHUB_TOKEN` | ✅ | GitHub Personal Access Token (scopes: `read:user`, `public_repo`) |
 | `NOTIFIER_URL` | ✅ | Public Codespace URL of slack-notifier-agent (port 3100) |
+| `NOTIFIER_API_KEY` | — | Must match slack-notifier-agent's `API_KEY` if it has one set. Sent as an `x-api-key` header |
 | `GITHUB_USER` | — | GitHub username to monitor (default: `lbrenman`) |
 | `POLL_INTERVAL_MS` | — | Poll interval in ms (default: `60000`) |
 | `MODEL` | — | Claude model (default: `claude-opus-4-5-20251101`) |
@@ -52,6 +53,7 @@ npm start
 5. Copy the forwarded URL — it looks like:
    `https://leor-laughing-spoon-abc123-3100.app.github.dev`
 6. Paste it as `NOTIFIER_URL` in this repo's `.env`
+7. If the notifier has `API_KEY` set (auth enabled), also set `NOTIFIER_API_KEY` in this repo's `.env` to the same value
 
 ## Demo Script
 
