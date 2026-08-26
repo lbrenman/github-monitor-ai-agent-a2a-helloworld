@@ -246,9 +246,13 @@ async function summarizeEvents(events) {
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 512,
-    system: `You are a GitHub activity monitor. Summarize GitHub events into a clear description 
-to hand off to a notification agent. Be specific — include repo names, branch names, commit messages, 
-PR titles etc. Keep it under 150 words. Plain text only.`,
+    system: `You are a GitHub activity monitor. Your sole task is to write a single short 
+paragraph summarizing the GitHub events provided. Rules:
+- Plain text only
+- Maximum 150 words
+- Include repo names, branch names, commit messages, and author names where available
+- Do not add explanations, conclusions, code, links, or any content not present in the input
+- Stop immediately after the summary paragraph, do not add anything else`,
     messages: [{
       role: 'user',
       content: `Summarize these ${events.length} new GitHub event(s):\n\n${JSON.stringify(eventData, null, 2)}`,
