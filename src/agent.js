@@ -34,6 +34,7 @@ const NOTIFIER_API_KEY = process.env.NOTIFIER_API_KEY || null; // only needed if
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '60000', 10);
 const MODEL         = process.env.MODEL || 'claude-opus-4-5-20251101';
 const CONTROL_PORT  = parseInt(process.env.CONTROL_PORT || '3000', 10);
+const PUBLIC_URL    = process.env.PUBLIC_URL || `http://localhost:${CONTROL_PORT}`;
 
 if (!GITHUB_TOKEN) { console.error('[error] GITHUB_TOKEN is required'); process.exit(1); }
 if (!NOTIFIER_URL) { console.error('[error] NOTIFIER_URL is required'); process.exit(1); }
@@ -47,7 +48,7 @@ const AGENT_CARD = {
   name: 'github-monitor',
   description: 'Autonomous GitHub activity monitor. Polls configured repos for new commits and branch changes, summarizes activity with Claude, and forwards summaries to a notifier agent via A2A.',
   version: '3.0.0',
-  url: `http://localhost:${CONTROL_PORT}`,
+  url: PUBLIC_URL,
   defaultInputModes: ['application/json', 'text/plain'],
   defaultOutputModes: ['application/json', 'text/plain'],
   capabilities: {
@@ -452,12 +453,12 @@ function startControlServer() {
   const server = http.createServer((req, res) => {
     const { method, url } = req;
 
-    if (method === 'GET'  && url === '/')                              return send(res, 200, renderUI(), 'text/html');
-    if (method === 'GET'  && url === '/status')                        return send(res, 200, { enabled, pollCount, lastPollTime, lastEventTime, lastEventSummary, repos: GITHUB_REPOS, notifier: notifierAgentCard?.name || null });
-    if (method === 'POST' && url === '/enable')                        { enabled = true;  addLog('Agent ENABLED via API.');  return send(res, 200, { enabled }); }
-    if (method === 'POST' && url === '/disable')                       { enabled = false; addLog('Agent DISABLED via API.'); return send(res, 200, { enabled }); }
-    if (method === 'GET'  && url === '/.well-known/agent-card.json')   { addLog('Agent Card requested (v0.3 path).'); return send(res, 200, AGENT_CARD); }
-    if (method === 'GET'  && url === '/.well-known/agent.json')        { addLog('Agent Card requested (legacy path).'); return send(res, 200, AGENT_CARD); }
+    if (method === 'GET'  && url === '/')                             return send(res, 200, renderUI(), 'text/html');
+    if (method === 'GET'  && url === '/status')                       return send(res, 200, { enabled, pollCount, lastPollTime, lastEventTime, lastEventSummary, repos: GITHUB_REPOS, notifier: notifierAgentCard?.name || null });
+    if (method === 'POST' && url === '/enable')                       { enabled = true;  addLog('Agent ENABLED via API.');  return send(res, 200, { enabled }); }
+    if (method === 'POST' && url === '/disable')                      { enabled = false; addLog('Agent DISABLED via API.'); return send(res, 200, { enabled }); }
+    if (method === 'GET'  && url === '/.well-known/agent-card.json')  { addLog('Agent Card requested (v0.3 path).'); return send(res, 200, AGENT_CARD); }
+    if (method === 'GET'  && url === '/.well-known/agent.json')       { addLog('Agent Card requested (legacy path).'); return send(res, 200, AGENT_CARD); }
 
     send(res, 404, { error: 'Not found' });
   });
@@ -486,7 +487,7 @@ async function main() {
   console.log(`Notifier URL  : ${NOTIFIER_URL}`);
   console.log(`Notifier auth : ${NOTIFIER_API_KEY ? 'x-api-key configured' : 'none'}`);
   console.log(`Web UI        : http://localhost:${CONTROL_PORT}`);
-  console.log(`Agent Card    : http://localhost:${CONTROL_PORT}/.well-known/agent-card.json`);
+  console.log(`Agent Card    : ${PUBLIC_URL}/.well-known/agent-card.json`);
   console.log(`Model         : ${MODEL}`);
   console.log('\nFirst poll sets baseline — notifications start on second poll.\n');
 
