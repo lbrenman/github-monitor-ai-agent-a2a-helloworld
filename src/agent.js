@@ -39,6 +39,55 @@ if (!GITHUB_TOKEN) { console.error('[error] GITHUB_TOKEN is required'); process.
 if (!NOTIFIER_URL) { console.error('[error] NOTIFIER_URL is required'); process.exit(1); }
 if (GITHUB_REPOS.length === 0) { console.error('[error] GITHUB_REPOS is required (comma-separated list, e.g. "repo-one,repo-two")'); process.exit(1); }
 
+// ─── Agent Card ───────────────────────────────────────────────────────────────
+// Advertises this agent's identity and capabilities to other agents and tools
+// such as A2A Inspector. Served at both the v0.3.0 path and the legacy alias.
+
+const AGENT_CARD = {
+  name: 'github-monitor',
+  description: 'Autonomous GitHub activity monitor. Polls configured repos for new commits and branch changes, summarizes activity with Claude, and forwards summaries to a notifier agent via A2A.',
+  version: '3.0.0',
+  url: `http://localhost:${parseInt(process.env.CONTROL_PORT || '3000', 10)}`,
+  capabilities: {
+    streaming: false,
+    pushNotifications: false,
+  },
+  skills: [
+    {
+      id: 'monitor_repos',
+      name: 'Monitor GitHub Repos',
+      description: 'Continuously polls configured GitHub repositories for new commits and branch changes, and forwards summaries to a downstream notifier agent via A2A.',
+      tags: ['github', 'monitor', 'polling', 'automation'],
+      inputModes: ['application/json', 'text/plain'],
+      outputModes: ['application/json', 'text/plain'],
+    },
+    {
+      id: 'enable_monitoring',
+      name: 'Enable Monitoring',
+      description: 'Resume GitHub polling. POST /enable to activate.',
+      tags: ['control'],
+      inputModes: ['application/json'],
+      outputModes: ['application/json'],
+    },
+    {
+      id: 'disable_monitoring',
+      name: 'Disable Monitoring',
+      description: 'Pause GitHub polling. No A2A tasks will be sent while disabled. POST /disable to deactivate.',
+      tags: ['control'],
+      inputModes: ['application/json'],
+      outputModes: ['application/json'],
+    },
+    {
+      id: 'get_status',
+      name: 'Get Status',
+      description: 'Return current agent status including enabled state, poll count, monitored repos, and last event summary. GET /status.',
+      tags: ['control'],
+      inputModes: ['application/json'],
+      outputModes: ['application/json'],
+    },
+  ],
+};
+
 // ─── State ────────────────────────────────────────────────────────────────────
 
 const anthropic = new Anthropic();
@@ -401,10 +450,12 @@ function startControlServer() {
   const server = http.createServer((req, res) => {
     const { method, url } = req;
 
-    if (method === 'GET'  && url === '/')        return send(res, 200, renderUI(), 'text/html');
-    if (method === 'GET'  && url === '/status')  return send(res, 200, { enabled, pollCount, lastPollTime, lastEventTime, lastEventSummary, repos: GITHUB_REPOS, notifier: notifierAgentCard?.name || null });
-    if (method === 'POST' && url === '/enable')  { enabled = true;  addLog('Agent ENABLED via API.');  return send(res, 200, { enabled }); }
-    if (method === 'POST' && url === '/disable') { enabled = false; addLog('Agent DISABLED via API.'); return send(res, 200, { enabled }); }
+    if (method === 'GET'  && url === '/')                              return send(res, 200, renderUI(), 'text/html');
+    if (method === 'GET'  && url === '/status')                        return send(res, 200, { enabled, pollCount, lastPollTime, lastEventTime, lastEventSummary, repos: GITHUB_REPOS, notifier: notifierAgentCard?.name || null });
+    if (method === 'POST' && url === '/enable')                        { enabled = true;  addLog('Agent ENABLED via API.');  return send(res, 200, { enabled }); }
+    if (method === 'POST' && url === '/disable')                       { enabled = false; addLog('Agent DISABLED via API.'); return send(res, 200, { enabled }); }
+    if (method === 'GET'  && url === '/.well-known/agent-card.json')   { addLog('Agent Card requested (v0.3 path).'); return send(res, 200, AGENT_CARD); }
+    if (method === 'GET'  && url === '/.well-known/agent.json')        { addLog('Agent Card requested (legacy path).'); return send(res, 200, AGENT_CARD); }
 
     send(res, 404, { error: 'Not found' });
   });
@@ -433,6 +484,7 @@ async function main() {
   console.log(`Notifier URL  : ${NOTIFIER_URL}`);
   console.log(`Notifier auth : ${NOTIFIER_API_KEY ? 'x-api-key configured' : 'none'}`);
   console.log(`Web UI        : http://localhost:${CONTROL_PORT}`);
+  console.log(`Agent Card    : http://localhost:${CONTROL_PORT}/.well-known/agent-card.json`);
   console.log(`Model         : ${MODEL}`);
   console.log('\nFirst poll sets baseline — notifications start on second poll.\n');
 
