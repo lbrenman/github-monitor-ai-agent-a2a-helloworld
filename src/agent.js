@@ -47,7 +47,9 @@ const AGENT_CARD = {
   name: 'github-monitor',
   description: 'Autonomous GitHub activity monitor. Polls configured repos for new commits and branch changes, summarizes activity with Claude, and forwards summaries to a notifier agent via A2A.',
   version: '3.0.0',
-  url: `http://localhost:${parseInt(process.env.CONTROL_PORT || '3000', 10)}`,
+  url: `http://localhost:${CONTROL_PORT}`,
+  defaultInputModes: ['application/json', 'text/plain'],
+  defaultOutputModes: ['application/json', 'text/plain'],
   capabilities: {
     streaming: false,
     pushNotifications: false,
