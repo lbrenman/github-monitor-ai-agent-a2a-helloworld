@@ -1,6 +1,6 @@
 # github-monitor
 
-> Autonomous GitHub activity agent (A2A Client). Polls a configured list of GitHub repos for new branches and commits, uses Claude to summarize them, and delegates Slack notifications to `slack-notifier-agent` via the A2A protocol.
+> Autonomous GitHub activity agent (A2A Client). Polls a configured list of GitHub repos for new branches and commits, uses Claude to summarize them, and delegates Slack notifications to [slack-notifier-agent](https://github.com/lbrenman/slack-notifier-agent-ai-agent-a2a-helloworld) via the A2A protocol.
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/lbrenman/github-monitor-ai-agent-a2a-helloworld)
 
